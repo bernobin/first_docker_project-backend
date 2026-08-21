@@ -1,0 +1,16 @@
+{
+  "name": "BasicApp2 Backend",
+  "dockerComposeFile": "../../compose.yaml",
+  "service": "backend",
+  "workspaceFolder": "/app",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "eamodio.gitlens"
+      ]
+    }
+  }
+}
