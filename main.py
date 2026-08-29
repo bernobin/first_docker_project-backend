@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 import mysql.connector
 import os
-import hvac
 
 app = FastAPI()
 
