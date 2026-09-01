@@ -1,41 +1,61 @@
-from fastapi import FastAPI
+from typing import Protocol
+
 import mysql.connector
-import os
-
-app = FastAPI()
-
-def read_secret(name: str) -> str:
-    with open(F"/run/secrets/{name}", "r") as f:
-        return f.read().strip()
-
-def get_db():
-    password = read_secret("db_user_password")
-
-    return mysql.connector.connect(
-        host="db",
-        user="hello",
-        password=password,
-        database="helloapp",
-    )
-
-@app.get("/")
-def root():
-    return {"message": "Hello from Python!"}
+from fastapi import FastAPI
 
 
-@app.post("/api/hello")
-def hello():
-    db = get_db()
-    cursor = db.cursor()
+class GreetingDatabase(Protocol):
+    def add_greeting(self, message: str) -> None: ...
 
-    cursor.execute(
-        "INSERT INTO greetings (message) VALUES (%s)",
-        ("Hello from Vue!",),
-    )
 
-    db.commit()
+class Database:
+    def __init__(self):
+        self.password: str = self.read_secret("db_user_password")
 
-    cursor.close()
-    db.close()
+    def read_secret(self, name: str) -> str:
+        with open(f"/run/secrets/{name}", "r") as f:
+            return f.read().strip()
 
-    return {"message": "Hello!"}
+    def connect(self):
+        return mysql.connector.connect(
+            host="db",
+            user="hello",
+            password=self.password,
+            database="helloapp",
+        )
+
+    def add_greeting(self, message: str) -> None:
+        db = self.connect()
+        cursor = db.cursor()
+
+        cursor.execute(
+            "INSERT INTO greetings (message) VALUES (%s)",
+            (message,),
+        )
+
+        db.commit()
+
+        cursor.close()
+        db.close()
+
+
+class Api:
+    def __init__(self, database: Database):
+        self.database: GreetingDatabase = database
+        self.app: FastAPI = FastAPI()
+
+        self.app.get("/")(self.root)
+        self.app.post("/api/hello")(self.hello)
+
+    def root(self) -> dict[str, str]:
+        return {"message": "Hello from Python!"}
+
+    def hello(self) -> dict[str, str]:
+        self.database.add_greeting("Hello from Vue!")
+        return {"message": "Hello!"}
+
+
+database = Database()
+api = Api(database)
+
+app = api.app
