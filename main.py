@@ -3,25 +3,34 @@ from typing import Protocol
 import mysql.connector
 from fastapi import FastAPI
 
+from src.DatabaseConfig import DatabaseConfig
 
-class GreetingDatabase(Protocol):
+
+class HelloAppDatabase(Protocol):
     def add_greeting(self, message: str) -> None: ...
 
 
 class Database:
-    def __init__(self):
-        self.password: str = self.read_secret("db_user_password")
+    password = property()
+    config = property()
 
-    def read_secret(self, name: str) -> str:
-        with open(f"/run/secrets/{name}", "r") as f:
-            return f.read().strip()
+    def __init__(self, config: DatabaseConfig):
+        self.config = config
+
+    @config.getter
+    def config(self) -> DatabaseConfig:
+        return self._config
+
+    @config.setter
+    def config(self, config: DatabaseConfig):
+        self._config = config
 
     def connect(self):
         return mysql.connector.connect(
-            host="db",
-            user="hello",
-            password=self.password,
-            database="helloapp",
+            host=self.config.host,
+            user=self.config.user,
+            password=self.config.password,
+            database=self.config.database,
         )
 
     def add_greeting(self, message: str) -> None:
@@ -40,12 +49,22 @@ class Database:
 
 
 class Api:
-    def __init__(self, database: Database):
-        self.database: GreetingDatabase = database
+    database = property()
+
+    def __init__(self, database: HelloAppDatabase):
+        self.database = database
         self.app: FastAPI = FastAPI()
 
         self.app.get("/")(self.root)
         self.app.post("/api/hello")(self.hello)
+
+    @database.getter
+    def database(self) -> HelloAppDatabase:
+        return self._database
+
+    @database.setter
+    def database(self, database: HelloAppDatabase):
+        self._database = database
 
     def root(self) -> dict[str, str]:
         return {"message": "Hello from Python!"}
@@ -55,7 +74,14 @@ class Api:
         return {"message": "Hello!"}
 
 
-database = Database()
+config = DatabaseConfig.from_docker_secrets(
+    host="db",
+    user="hello",
+    database="helloapp",
+    password_key="db_user_password",
+)
+
+database = Database(config)
 api = Api(database)
 
 app = api.app
