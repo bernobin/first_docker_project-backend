@@ -4,7 +4,6 @@ import mysql.connector
 
 from src.DatabaseConfig import DatabaseConfig
 
-
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 
 

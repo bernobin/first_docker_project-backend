@@ -2,16 +2,14 @@ FROM python:3.12-slim
 
 RUN useradd --create-home --shell /bin/bash python
 
-USER python
-
 WORKDIR /app
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
-
-ENV PATH="/home/python/.local/bin:$PATH"
+RUN pip install --no-cache-dir --no-warn-script-location -r requirements.txt
 
 COPY --chown=python:python . .
+
+USER python
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
